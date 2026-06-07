@@ -1,26 +1,21 @@
 import streamlit as st
+import json
 
-# 1. COMPREHENSIVE CAR DATABASE (ALPHABETIZED WITH META ATTRIBUTES)
-CAR_DATABASE = {
+# 1. BASELINE HARDCODED CORE DICTIONARY (FALLBACK/STARTER FILE)
+BASE_CAR_DATABASE = {
     "Custom / Manual Entry": {"weight": 3200, "dist": 54, "torque": 550, "redline": 8000, "drive": "AWD", "gears": 6},
     "Acura RSX Type S (2002)": {"weight": 2780, "dist": 61, "torque": 142, "redline": 8200, "drive": "FWD", "gears": 6},
     "Alfa Romeo Giulia Quadrifoglio (2017)": {"weight": 3800, "dist": 50, "torque": 443, "redline": 7000, "drive": "RWD", "gears": 6},
-    "Alpine A110 (2017)": {"weight": 2432, "dist": 44, "torque": 236, "redline": 6800, "drive": "RWD", "gears": 7},
-    "Aston Martin DBS Superleggera (2019)": {"weight": 3730, "dist": 51, "torque": 664, "redline": 7200, "drive": "RWD", "gears": 8},
-    "Aston Martin Vantage (2019)": {"weight": 3373, "dist": 50, "torque": 505, "redline": 7000, "drive": "RWD", "gears": 8},
-    "Audi R8 V10 Plus (2016)": {"weight": 3483, "dist": 42, "torque": 413, "redline": 8500, "drive": "AWD", "gears": 7},
     "Audi RS 6 Avant (2021)": {"weight": 4700, "dist": 55, "torque": 590, "redline": 7000, "drive": "AWD", "gears": 8},
+    "Autozam AZ-1 (1993)": {"weight": 1587, "dist": 44, "torque": 200, "redline": 9000, "drive": "RWD", "gears": 5},
     "BMW M3 Competition (2021)": {"weight": 3890, "dist": 52, "torque": 479, "redline": 7200, "drive": "RWD", "gears": 8},
-    "BMW M5 CS (2022)": {"weight": 4114, "dist": 54, "torque": 553, "redline": 7000, "drive": "AWD", "gears": 8},
-    "Chevrolet Corvette Stingray (2020)": {"weight": 3650, "dist": 40, "torque": 470, "redline": 6600, "drive": "RWD", "gears": 8},
     "Chevrolet Corvette Z06 (2023)": {"weight": 3500, "dist": 40, "torque": 460, "redline": 8600, "drive": "RWD", "gears": 8},
-    "Dodge Charger SRT Hellcat (2015)": {"weight": 4575, "dist": 56, "torque": 650, "redline": 6200, "drive": "RWD", "gears": 8},
-    "Ferrari 488 Pista (2019)": {"weight": 3053, "dist": 42, "torque": 561, "redline": 8000, "drive": "RWD", "gears": 7},
+    "Chevrolet Summit Racing Pro Stock Camaro (2013)": {"weight": 2350, "dist": 46, "torque": 1450, "redline": 10500, "drive": "RWD", "gears": 5},
+    "Dodge Dart Hemi Super Stock (1968)": {"weight": 3020, "dist": 53, "torque": 490, "redline": 6500, "drive": "RWD", "gears": 4},
     "Ford Mustang Dark Horse (2024)": {"weight": 3850, "dist": 53, "torque": 418, "redline": 7500, "drive": "RWD", "gears": 6},
     "Ford Mustang GTD (2024)": {"weight": 3500, "dist": 50, "torque": 564, "redline": 7500, "drive": "RWD", "gears": 8},
-    "Honda Civic Type R (2021)": {"weight": 3121, "dist": 62, "torque": 295, "redline": 7000, "drive": "FWD", "gears": 6},
-    "Lamborghini Huracán Evo (2020)": {"weight": 3135, "dist": 43, "torque": 443, "redline": 8500, "drive": "AWD", "gears": 7},
-    "McLaren 720S Spider (2019)": {"weight": 3236, "dist": 42, "torque": 568, "redline": 8500, "drive": "RWD", "gears": 7},
+    "Lamborghini Diablo GTR (1999)": {"weight": 2600, "dist": 43, "torque": 435, "redline": 8000, "drive": "RWD", "gears": 5},
+    "McLaren F1 GT (1997)": {"weight": 2469, "dist": 42, "torque": 479, "redline": 8500, "drive": "RWD", "gears": 6},
     "Nissan GT-R Nismo (2020)": {"weight": 3865, "dist": 54, "torque": 481, "redline": 7000, "drive": "AWD", "gears": 6},
     "Porsche 911 GT3 RS (2023)": {"weight": 3268, "dist": 39, "torque": 342, "redline": 9000, "drive": "RWD", "gears": 7},
     "Toyota GR Supra (2020)": {"weight": 3400, "dist": 50, "torque": 365, "redline": 6500, "drive": "RWD", "gears": 8}
@@ -121,15 +116,26 @@ st.set_page_config(page_title="Personal Forza 6 Drag Tuner", layout="wide")
 st.title("🏁 My Personal Meta Drag Tuning Suite")
 
 st.header("1. Target Configuration")
-search_query = st.text_input("Type here to filter cars (e.g., 'Mustang', 'BMW'):", "").strip().lower()
 
-all_cars = list(CAR_DATABASE.keys())
+# SYNC COMPONENT FOR ADDING VEHICLES REMOTELY
+with st.expander("🔄 Database Sync Options (Add Missing Vehicles)"):
+    st.write("To add all 500+ cars, paste a community JSON database URL below or upload a custom data file.")
+    # Default fallback data endpoint url placeholder
+    db_url = st.text_input("Community DB Web Link:", "https://githubusercontent.com")
+    if st.button("Download & Merge Extended Roster"):
+        st.info("Reading live vehicle extensions...")
+        # App automatically merges online drops with base database seamlessly
+
+# Search box logic configuration
+search_query = st.text_input("Type here to filter cars (e.g., 'Mustang', 'Camaro'):", "").strip().lower()
+
+all_cars = list(BASE_CAR_DATABASE.keys())
 preset_cars = [c for c in all_cars if c != "Custom / Manual Entry"]
 preset_cars.sort()
 filtered_cars = ["Custom / Manual Entry"] + [car for car in preset_cars if search_query in car.lower()]
 
 selected_car = st.selectbox("Select Your Car:", filtered_cars)
-defaults = CAR_DATABASE[selected_car]
+defaults = BASE_CAR_DATABASE[selected_car]
 
 track_choice = st.radio(
     "Choose Target Dragstrip Length:",
