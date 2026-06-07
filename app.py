@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 1. EXPANDED CAR DATABASE (SORTED AUTOMATICALLY)
+# 1. COMPREHENSIVE CAR DATABASE (ALPHABETIZED WITH META ATTRIBUTES)
 CAR_DATABASE = {
     "Custom / Manual Entry": {"weight": 3200, "dist": 54, "torque": 550, "redline": 8000, "drive": "AWD", "gears": 6},
     "Acura RSX Type S (2002)": {"weight": 2780, "dist": 61, "torque": 142, "redline": 8200, "drive": "FWD", "gears": 6},
@@ -26,8 +26,8 @@ CAR_DATABASE = {
     "Toyota GR Supra (2020)": {"weight": 3400, "dist": 50, "torque": 365, "redline": 6500, "drive": "RWD", "gears": 8}
 }
 
-class PersonalForzaTuner:
-    def __init__(self, weight, front_dist, torque, redline, drive_type="AWD", gears=6):
+class ForzaMetaDragTuner:
+    def __init__(self, weight, front_dist, torque, redline, drive_type, gears, target_track):
         self.weight = weight
         self.front_dist = front_dist / 100.0 if front_dist > 1.0 else front_dist
         self.rear_dist = 1.0 - self.front_dist
@@ -35,71 +35,138 @@ class PersonalForzaTuner:
         self.redline = redline
         self.drive_type = drive_type.upper()
         self.gear_count = gears
+        self.track = target_track  # "1/4 Mile", "1/2 Mile", "1 KM"
 
-    def compute_tune(self):
-        tires = {"Front Pressure": "30.5 PSI", "Rear Pressure": "30.0 PSI"} if self.drive_type == "AWD" else \
-                {"Front Pressure": "31.0 PSI", "Rear Pressure": "29.5 PSI"} if self.drive_type == "RWD" else \
-                {"Front Pressure": "29.5 PSI", "Rear Pressure": "31.0 PSI"}
+    def compute_meta_tune(self):
+        # --- TAB 1: TIRES ---
+        # Drag tires need maximum rear deformation footprint for RWD/AWD launch squat
+        if self.drive_type == "FWD":
+            tires = {"Front Tire Pressure": "15.0 PSI (Max Launch Patch)", "Rear Tire Pressure": "45.0 PSI (Min Drag)"}
+        elif self.drive_type == "RWD":
+            tires = {"Front Tire Pressure": "45.0 PSI (Min Drag)", "Rear Tire Pressure": "15.0 PSI (Max Launch Patch)"}
+        else: # AWD
+            tires = {"Front Tire Pressure": "22.0 PSI (Balanced Grab)", "Rear Tire Pressure": "15.0 PSI (Squat Traction)"}
+
+        # --- TAB 2: GEARING (TRACK LENGTH MATRICES) ---
+        # Scale final drive to maximize acceleration space before hitting the physical finish line trap
+        track_modifiers = {"1/4 Mile": 1.15, "1 KM": 0.95, "1/2 Mile": 0.85}
+        mod = track_modifiers.get(self.track, 1.0)
         
-        final_drive = round(3.40 + (self.torque / 1100.0), 2)
+        base_fd = 2.80 + (self.torque / 750.0)
+        final_drive = round(max(2.20, min(base_fd * mod, 6.10)), 2)
+        
+        # Progression matrix using geometric decay
         ratios = []
-        first = max(2.60, min(round(4.10 - (self.torque / 450.0), 2), 4.30))
-        ratios.append(first)
-        decay = 0.76 - (self.gear_count * 0.008)
-        current = first
+        first_gear = round(3.80 - (self.torque / 500.0), 2)
+        first_gear = max(2.20, min(first_gear, 4.50))
+        ratios.append(first_gear)
+        
+        decay = 0.74 - (self.gear_count * 0.005)
+        current = first_gear
         for i in range(1, self.gear_count):
-            current *= (decay + (i * 0.018))
-            ratios.append(round(max(0.50, current), 2))
+            current *= (decay + (i * 0.015))
+            ratios.append(round(max(0.40, current), 2))
+            
         gearing = {"Final Drive": final_drive}
         for idx, r in enumerate(ratios, 1):
             gearing[f"Gear {idx}"] = r
 
-        alignment = {"Front Camber": "-2.0°", "Rear Camber": "-1.2°", "Front Toe": "0.0°", "Rear Toe": "0.0°", "Caster": "6.4°"}
+        # --- TAB 3: ALIGNMENT ---
+        # Dead-straight drag tuning requires zero toe/caster resistance to eliminate top-end speed drag
+        alignment = {
+            "Front Camber": "0.0° (Max Straightline)",
+            "Rear Camber": "-0.5° (Compensates for Launch Squat)",
+            "Front Toe": "0.0°",
+            "Rear Toe": "0.0°",
+            "Front Caster": "7.0° (High Velocity Stability)"
+        }
 
-        f_arb = 1.0 + (64.0 * self.front_dist)
-        r_arb = 1.0 + (64.0 * self.rear_dist)
-        arbs = {"Front ARB": round(f_arb - 3.0, 1), "Rear ARB": round(r_arb + 2.0, 1)}
+        # --- TAB 4: ANTI-ROLL BARS ---
+        # Soft front / Stiff rear controls dynamic side-to-side twisting off the line
+        arbs = {
+            "Front ARB": "1.0 (Completely Loose - Free Extension)",
+            "Rear ARB": "65.0 (Maximum Stiffness - Stops Launch Twist)"
+        }
 
-        f_spring = ((1200.0 - 100.0) * self.front_dist) + 100.0
-        r_spring = ((1200.0 - 100.0) * self.rear_dist) + 100.0
-        springs = {"Front Springs": f"{round(f_spring, 1)} lb/in", "Rear Springs": f"{round(r_spring, 1)} lb/in", "Front Ride Height": "4.2 in", "Rear Ride Height": "4.4 in"}
+        # --- TAB 5: SPRINGS ---
+        # Hooke's law calibrated explicitly to force center-of-mass weight transfer backwards
+        f_spring = ((600.0 - 50.0) * self.front_dist) + 50.0
+        r_spring = ((1200.0 - 200.0) * self.rear_dist) + 200.0
+        
+        springs = {
+            "Front Springs": f"{round(f_spring, 1)} lb/in (Soft - Dynamic Lift)",
+            "Rear Springs": f"{round(r_spring, 1)} lb/in (Stiff - Supports Load)",
+            "Front Ride Height": "Maximum (Promotes Air Lift / Squat)",
+            "Rear Ride Height": "Minimum (Keeps Rear CG Low)"
+        }
 
-        f_reb = 1.0 + (19.0 * self.front_dist)
-        r_reb = 1.0 + (19.0 * self.rear_dist)
-        damping = {"Front Rebound": round(f_reb, 1), "Rear Rebound": round(r_reb, 1), "Front Bump": round(f_reb * 0.55, 1), "Rear Bump": round(r_reb * 0.55, 1)}
+        # --- TAB 6: DAMPING ---
+        # Extreme weight transfer settings to keep the front up and the rear planted under compression
+        damping = {
+            "Front Rebound": "20.0 (Holds Front Up During Launch)",
+            "Rear Rebound": "1.0 (Allows Quick Rear Rebound Extension)",
+            "Front Bump": "1.0 (Allows Instant Front Nose Rise)",
+            "Rear Bump": "20.0 (Stops Rear Shock Bottoming Out)"
+        }
 
+        # --- TAB 7 & 8: AERO / BRAKES ---
+        aero = {"Front Aero": "Minimum Downforce (Lowest Drag)", "Rear Aero": "Minimum Downforce (Highest Top Speed)"}
+        brakes = {"Brake Balance": "50%", "Brake Pressure": "100%"}
+
+        # --- TAB 9: DIFFERENTIAL ---
+        # 100% acceleration lock keeps power spinning evenly to both wheels simultaneously
         if self.drive_type == "AWD":
-            diff = {"Front Accel": "50%", "Front Decel": "0%", "Rear Accel": "85%", "Rear Decel": "30%", "Center Bias": "65% Rear"}
+            diff = {
+                "Front Accel": "100%", "Front Decel": "0%",
+                "Rear Accel": "100%", "Rear Decel": "0%",
+                "Center Torque Bias": "75% Rear (Optimizes Launch Squat)"
+            }
         elif self.drive_type == "RWD":
-            diff = {"Rear Accel": "75%", "Rear Decel": "25%"}
-        else:
-            diff = {"Front Accel": "45%", "Front Decel": "10%"}
+            diff = {"Rear Accel": "100%", "Rear Decel": "0%"}
+        else: # FWD
+            diff = {"Front Accel": "100%", "Front Decel": "0%"}
 
-        return {"TIRES": tires, "GEARING": gearing, "ALIGNMENT": alignment, "ANTI-ROLL BARS": arbs, "SPRINGS": springs, "DAMPING": damping, "DIFFERENTIAL": diff}
+        return {
+            "TIRES": tires,
+            "GEARING": gearing,
+            "ALIGNMENT": alignment,
+            "ANTI-ROLL BARS": arbs,
+            "SPRINGS": springs,
+            "DAMPING": damping,
+            "AERO & BRAKES": {**aero, **brakes},
+            "DIFFERENTIAL": diff
+        }
 
-st.set_page_config(page_title="Personal Forza 6 Tuner", layout="wide")
-st.title("🏎️ My Personal Forza Horizon 6 Tuner")
+# --- SCREEN RENDERING LAYER ---
+st.set_page_config(page_title="Personal Forza 6 Drag Tuner", layout="wide")
+st.title("🏁 My Personal Meta Drag Tuning Suite")
+st.write("Outputs a complete, specialized track-length tune designed to eliminate trap-speed clipping.")
 
-st.header("Search & Select Vehicle")
+# Meta Selection Blocks
+st.header("1. Target Configuration")
+search_query = st.text_input("Type here to filter cars (e.g., 'Mustang', 'Corvette', 'Audi'):", "").strip().lower()
 
-# MOBILE NAVIGATION FIX: Add a real-time typing search filter box
-search_query = st.text_input("Type here to filter cars (e.g., 'Mustang', 'BMW', 'Corvette'):", "").strip().lower()
-
-# Get all keys, put Manual Entry at the top, and alphabetize the rest perfectly
 all_cars = list(CAR_DATABASE.keys())
 preset_cars = [c for c in all_cars if c != "Custom / Manual Entry"]
 preset_cars.sort()
-
-# Dynamically filter the list based on what the user types on their phone keyboard
 filtered_cars = ["Custom / Manual Entry"] + [car for car in preset_cars if search_query in car.lower()]
 
-selected_car = st.selectbox("Matching Results:", filtered_cars)
+selected_car = st.selectbox("Select Your Car:", filtered_cars)
 defaults = CAR_DATABASE[selected_car]
+
+# THE META DRAGSTRIP LENGTH SELECTOR TABS
+track_choice = st.radio(
+    "Choose Target Dragstrip Length (Recalculates Power Extension):",
+    ["1/4 Mile", "1 KM", "1/2 Mile"],
+    horizontal=True
+)
+
+st.markdown("---")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.header("Chassis & Engine Specs")
+    st.header("2. Vehicle Parameters")
     weight = st.number_input("Weight (lbs)", value=defaults["weight"], step=50)
     dist = st.slider("Front Weight Distribution (%)", min_value=30, max_value=70, value=defaults["dist"])
     torque = st.number_input("Peak Torque (lb-ft)", value=defaults["torque"], step=10)
@@ -110,13 +177,13 @@ with col1:
     gears = st.slider("Transmission Gear Count", min_value=4, max_value=10, value=defaults["gears"])
 
 with col2:
-    st.header("Tab-by-Tab Configuration")
-    engine = PersonalForzaTuner(weight, dist, torque, redline, drive_type, gears)
-    tune_results = engine.compute_tune()
+    st.header(f"3. In-Game Tune ({track_choice})")
     
-    ui_tabs = st.tabs(list(tune_results.keys()))
-    for idx, (tab_name, data_dict) in enumerate(tune_results.items()):
+    # Instantiate the tuning calculator using the track parameters
+    tuner_engine = ForzaMetaDragTuner(weight, dist, torque, redline, drive_type, gears, track_choice)
+    tune_specs = tuner_engine.compute_meta_tune()
+    
+    # Display in-game setup tabs
+    ui_tabs = st.tabs(list(tune_specs.keys()))
+    for idx, (tab_name, data_dict) in enumerate(tune_specs.items()):
         with ui_tabs[idx]:
-            st.subheader(f"{tab_name} Settings")
-            for param, val in data_dict.items():
-                st.metric(label=param, value=str(val))
