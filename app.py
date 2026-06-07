@@ -1,5 +1,36 @@
 import streamlit as st
 
+# 1. EMBEDDED CAR DATABASE (EASY TO EXPAND AT THE TOP)
+CAR_DATABASE = {
+    "Custom / Manual Entry": {
+        "weight": 3200, "dist": 54, "torque": 550, "redline": 8000, "drive": "AWD", "gears": 6
+    },
+    "2024 Ford Mustang Dark Horse": {
+        "weight": 3850, "dist": 53, "torque": 418, "redline": 7500, "drive": "RWD", "gears": 6
+    },
+    "2024 Ford Mustang GTD": {
+        "weight": 3500, "dist": 50, "torque": 564, "redline": 7500, "drive": "RWD", "gears": 8
+    },
+    "2023 Chevrolet Corvette Z06": {
+        "weight": 3500, "dist": 40, "torque": 460, "redline": 8600, "drive": "RWD", "gears": 8
+    },
+    "2021 Audi RS 6 Avant": {
+        "weight": 4700, "dist": 55, "torque": 590, "redline": 7000, "drive": "AWD", "gears": 8
+    },
+    "2020 Chevrolet Corvette Stingray": {
+        "weight": 3650, "dist": 40, "torque": 470, "redline": 6600, "drive": "RWD", "gears": 8
+    },
+    "2019 Aston Martin DBS Superleggera": {
+        "weight": 3730, "dist": 51, "torque": 664, "redline": 7200, "drive": "RWD", "gears": 8
+    },
+    "2017 Alfa Romeo Giulia Quadrifoglio": {
+        "weight": 3800, "dist": 50, "torque": 443, "redline": 7000, "drive": "RWD", "gears": 6
+    },
+    "2002 Acura RSX Type S": {
+        "weight": 2780, "dist": 61, "torque": 142, "redline": 8200, "drive": "FWD", "gears": 6
+    }
+}
+
 class PersonalForzaTuner:
     def __init__(self, weight, front_dist, torque, redline, drive_type="AWD", gears=6):
         self.weight = weight
@@ -54,16 +85,25 @@ class PersonalForzaTuner:
 st.set_page_config(page_title="Personal Forza 6 Tuner", layout="wide")
 st.title("🏎️ My Personal Forza Horizon 6 Tuner")
 
+# ADD CAR SELECTOR BOX AT THE TOP
+st.header("Select Your Vehicle")
+selected_car = st.selectbox("Choose a car from the library to auto-fill specs:", list(CAR_DATABASE.keys()))
+defaults = CAR_DATABASE[selected_car]
+
 col1, col2 = st.columns(2)
 
 with col1:
     st.header("Car Specs")
-    weight = st.number_input("Weight (lbs)", value=3200, step=50)
-    dist = st.slider("Front Weight Distribution (%)", min_value=30, max_value=70, value=54)
-    torque = st.number_input("Peak Torque (lb-ft)", value=550, step=10)
-    redline = st.number_input("Redline RPM", value=8000, step=500)
-    drive_type = st.selectbox("Drivetrain", ["AWD", "RWD", "FWD"])
-    gears = st.slider("Transmission Gears", min_value=4, max_value=10, value=6)
+    # Form elements now dynamically bind to the selected car dictionary defaults
+    weight = st.number_input("Weight (lbs)", value=defaults["weight"], step=50)
+    dist = st.slider("Front Weight Distribution (%)", min_value=30, max_value=70, value=defaults["dist"])
+    torque = st.number_input("Peak Torque (lb-ft)", value=defaults["torque"], step=10)
+    redline = st.number_input("Redline RPM", value=defaults["redline"], step=500)
+    
+    # Calculate index positions for select boxes safely
+    dt_options = ["AWD", "RWD", "FWD"]
+    drive_type = st.selectbox("Drivetrain", dt_options, index=dt_options.index(defaults["drive"]))
+    gears = st.slider("Transmission Gears", min_value=4, max_value=10, value=defaults["gears"])
 
 with col2:
     st.header("Tab-by-Tab Configuration")
@@ -76,4 +116,3 @@ with col2:
             st.subheader(f"{tab_name} Settings")
             for param, val in data_dict.items():
                 st.metric(label=param, value=str(val))
-
