@@ -54,7 +54,7 @@ class PersonalForzaTuner:
 st.set_page_config(page_title="Personal Forza 6 Tuner", layout="wide")
 st.title("🏎️ My Personal Forza Horizon 6 Tuner")
 
-col1, col2 = st.columns()
+ col1, col2 = st.columns(2)
 
 with col1:
     st.header("Car Specs")
